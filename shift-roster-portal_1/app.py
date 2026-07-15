@@ -91,6 +91,34 @@ def generate():
         "min_staff_night": form.get("min_staff_night", 1),
     }
 
+    # ---- Hard check: is the minimum staff rule even POSSIBLE to meet? ----
+    # This counts, ignoring leaves/off-days entirely, how many employees
+    # are assigned to each shift for the whole period. If that base
+    # headcount is already below the minimum you asked for, no amount of
+    # rearranging off-days can fix it — so we stop right here with a
+    # clear message, instead of quietly generating a roster full of
+    # shortage warnings.
+    min_staff = {
+        MORNING: int(rules["min_staff_morning"]),
+        EVENING: int(rules["min_staff_evening"]),
+        NIGHT: int(rules["min_staff_night"]),
+    }
+    assigned_counts = {MORNING: 0, EVENING: 0, NIGHT: 0}
+    for emp in employees:
+        assigned_counts[employee_shifts[emp]] += 1
+
+    shortfalls = []
+    for shift in (MORNING, EVENING, NIGHT):
+        if assigned_counts[shift] < min_staff[shift]:
+            shortfalls.append({
+                "shift": shift,
+                "required": min_staff[shift],
+                "assigned": assigned_counts[shift],
+            })
+
+    if shortfalls:
+        return render_template("staffing_error.html", team_name=team_name, shortfalls=shortfalls), 400
+
     # Leave rows also arrive as parallel lists.
     leave_employees = form.getlist("leave_employee")
     leave_from = form.getlist("leave_from")
@@ -106,6 +134,23 @@ def generate():
         })
 
     result = generate_roster(team_name, start_date, end_date, employees, employee_shifts, rules, leaves)
+
+    # ---- Hard check #2: did any SPECIFIC day dip below the minimum? ----
+    # This catches cases where you have enough people overall, but a
+    # leave happens to land on the same day as someone's weekly off,
+    # temporarily dropping a shift below the minimum. By default this
+    # also blocks the download (instead of just noting it in a
+    # spreadsheet tab you might not notice) so short-staffed days never
+    # silently ship. Tick "Generate anyway" in the Rules section if you
+    # need the file regardless (e.g. an unavoidable emergency leave).
+    allow_understaffed = form.get("allow_understaffed_days") == "on"
+    if result["warnings"] and not allow_understaffed:
+        return render_template(
+            "day_shortfall_error.html",
+            team_name=team_name,
+            issues=result["warnings"],
+        ), 400
+
     excel_bytes = build_excel(team_name, start_date, end_date, result)
 
     filename = (

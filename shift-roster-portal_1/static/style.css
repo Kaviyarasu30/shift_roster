@@ -192,6 +192,40 @@ input[type=text], input[type=number], input[type=date], select{
 
 .hint{ font-size:0.82rem; color:var(--muted); margin:0; }
 
+.error-card h2{ color:#B33; }
+.error-table{
+  width:100%;
+  border-collapse:collapse;
+  margin:14px 0;
+  font-size:0.9rem;
+}
+.error-table th, .error-table td{
+  border:1px solid var(--border);
+  padding:8px 12px;
+  text-align:left;
+}
+.error-table th{ background:#F5F6FB; }
+.error-back-btn{
+  display:inline-block;
+  text-decoration:none;
+  text-align:center;
+  width:auto;
+  padding:12px 22px;
+  margin-top:10px;
+}
+.issue-list{
+  font-size:0.85rem;
+  color:var(--ink);
+  background:#FFF6F6;
+  border:1px solid #F0CFCF;
+  border-radius:6px;
+  padding:14px 14px 14px 32px;
+  margin:14px 0;
+  max-height:320px;
+  overflow-y:auto;
+}
+.issue-list li{ margin-bottom:6px; }
+
 @media (max-width:600px){
   .grid-2, .grid-3{ grid-template-columns:1fr; }
 }
