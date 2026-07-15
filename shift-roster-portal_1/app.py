@@ -134,6 +134,23 @@ def generate():
         })
 
     result = generate_roster(team_name, start_date, end_date, employees, employee_shifts, rules, leaves)
+
+    # ---- Hard check #2: did any SPECIFIC day dip below the minimum? ----
+    # This catches cases where you have enough people overall, but a
+    # leave happens to land on the same day as someone's weekly off,
+    # temporarily dropping a shift below the minimum. By default this
+    # also blocks the download (instead of just noting it in a
+    # spreadsheet tab you might not notice) so short-staffed days never
+    # silently ship. Tick "Generate anyway" in the Rules section if you
+    # need the file regardless (e.g. an unavoidable emergency leave).
+    allow_understaffed = form.get("allow_understaffed_days") == "on"
+    if result["warnings"] and not allow_understaffed:
+        return render_template(
+            "day_shortfall_error.html",
+            team_name=team_name,
+            issues=result["warnings"],
+        ), 400
+
     excel_bytes = build_excel(team_name, start_date, end_date, result)
 
     filename = (

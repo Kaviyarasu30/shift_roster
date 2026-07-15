@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Some days are short-staffed — Shift Roster Generator</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <span class="dot dot-morning"></span><span class="dot dot-evening"></span><span class="dot dot-night"></span>
+    <h1>Shift Roster Generator</h1>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="card error-card">
+    <h2>⚠️ "{{ team_name }}" has {{ issues|length }} short-staffed day(s)</h2>
+    <p class="hint">
+      You have enough people overall, but on the day(s) below, a leave
+      and someone's weekly off happened to land on the same date,
+      dropping that shift below your minimum. The roster was
+      <strong>not</strong> generated so this doesn't ship unnoticed.
+    </p>
+
+    <ul class="issue-list">
+      {% for issue in issues %}
+      <li>{{ issue }}</li>
+      {% endfor %}
+    </ul>
+
+    <p class="hint">Fix it by either:</p>
+    <ul class="hint">
+      <li>Going back and moving that leave to a different date, <em>or</em></li>
+      <li>Going back and changing that person's (or a colleague's) weekly-off day for that week, <em>or</em></li>
+      <li>If this is unavoidable (e.g. a genuine emergency leave), go back and tick <strong>"Generate anyway even if some days are short-staffed"</strong> in the Rules section — the file will still download, with these dates flagged in a Warnings tab.</li>
+    </ul>
+
+    <a href="javascript:history.back()" class="btn-generate error-back-btn">← Go back and fix</a>
+  </section>
+</main>
+
+</body>
+</html>

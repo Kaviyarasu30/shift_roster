@@ -102,7 +102,7 @@
       </div>
 
       <h3>Minimum staff required per shift, every day</h3>
-      <p class="hint">If leaves or weekly-offs bring a shift below this number on any day, that day will be flagged in a "Warnings" tab in the downloaded file so you can adjust it manually.</p>
+      <p class="hint">If a specific day would drop below this number (e.g. a leave overlaps someone's weekly off), Generate Roster will stop and show you exactly which day/shift — no file downloads until it's fixed.</p>
       <div class="grid-3">
         <label>Morning
           <input type="number" name="min_staff_morning" value="1" min="0">
@@ -114,6 +114,10 @@
           <input type="number" name="min_staff_night" value="1" min="0">
         </label>
       </div>
+      <label class="checkbox-row">
+        <input type="checkbox" name="allow_understaffed_days">
+        Generate anyway even if some days are short-staffed (still flags them in a Warnings tab)
+      </label>
     </section>
 
     <!-- ============ LEAVES ============ -->
