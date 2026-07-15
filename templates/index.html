@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Shift Roster Generator</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <span class="dot dot-morning"></span><span class="dot dot-evening"></span><span class="dot dot-night"></span>
+    <h1>Shift Roster Generator</h1>
+  </div>
+</header>
+
+<main class="wrap">
+  <form action="/generate" method="post" id="rosterForm">
+
+    <!-- ============ TEAM INFO ============ -->
+    <section class="card">
+      <h2>1. Team Information</h2>
+      <div class="grid-3">
+        <label>Team name
+          <input type="text" name="team_name" placeholder="e.g. Customer Support" required>
+        </label>
+        <label>From date
+          <input type="date" name="start_date" required>
+        </label>
+        <label>To date
+          <input type="date" name="end_date" required>
+        </label>
+      </div>
+      <p class="hint">Pick any range — 2 weeks, 3 weeks, a full month, or a range that crosses into the next month (e.g. 9 Jun to 9 Jul). The roster covers every day from "From date" to "To date", inclusive.</p>
+    </section>
+
+    <!-- ============ EMPLOYEES ============ -->
+    <section class="card">
+      <h2>2. Employees &amp; this month's shift</h2>
+      <p class="hint">Each employee stays on ONE shift for the whole month. Pick where they go this month — e.g. if someone was on Morning last month and should move to Night, just select Night for them below.</p>
+      <div class="employee-header grid-3">
+        <span>Employee</span><span>Shift this month</span><span></span>
+      </div>
+      <div id="employeeList"></div>
+      <div class="row-buttons">
+        <button type="button" class="btn-add" onclick="addEmployee()">+ Add employee</button>
+        <button type="button" class="btn-rotate" onclick="rotateAllForward()">🔄 Rotate everyone forward one step</button>
+      </div>
+      <p class="hint">"Rotate forward" moves every dropdown Morning → Evening, Evening → Night, Night → Morning — a quick starting point if your whole team rotates together each month. You can still adjust anyone by hand afterwards.</p>
+    </section>
+
+    <!-- ============ SHIFT TIMES (reference only) ============ -->
+    <section class="card">
+      <h2>3. Shift Details</h2>
+      <div class="shift-legend">
+        <div class="shift-pill shift-morning">Morning · 6:30 AM – 3:30 PM</div>
+        <div class="shift-pill shift-evening">Evening · 2:30 PM – 11:30 PM</div>
+        <div class="shift-pill shift-night">Night · 10:30 PM – 7:30 AM</div>
+      </div>
+      <p class="hint">These timings are fixed for this tool — the generator only decides <em>who</em> works <em>which</em> of these each day.</p>
+    </section>
+
+    <!-- ============ RULES ============ -->
+    <section class="card">
+      <h2>4. Rules</h2>
+      <div class="grid-2">
+        <label class="checkbox-row">
+          <input type="checkbox" name="weekly_off_enabled" checked onchange="toggleWeeklyOffFields()">
+          Give every employee weekly off day(s)
+        </label>
+        <label>Off style
+          <select name="weekly_off_mode" onchange="toggleWeeklyOffFields()">
+            <option value="rotating">Rotating (moves around each week, fair to everyone)</option>
+            <option value="fixed">Fixed — same days for everyone (e.g. always Sat &amp; Sun)</option>
+            <option value="fixed_per_employee">Fixed — different days per employee (set below, next to each name)</option>
+          </select>
+        </label>
+      </div>
+
+      <div id="rotatingOffFields">
+        <label>Days off per week
+          <input type="number" name="weekly_off_count" value="1" min="1" max="6">
+        </label>
+      </div>
+
+      <div id="fixedOffFields" style="display:none;">
+        <label>Which day(s) are off every week</label>
+        <div class="weekday-checks">
+          <label class="checkbox-row"><input type="checkbox" name="weekly_off_days" value="0"> Mon</label>
+          <label class="checkbox-row"><input type="checkbox" name="weekly_off_days" value="1"> Tue</label>
+          <label class="checkbox-row"><input type="checkbox" name="weekly_off_days" value="2"> Wed</label>
+          <label class="checkbox-row"><input type="checkbox" name="weekly_off_days" value="3"> Thu</label>
+          <label class="checkbox-row"><input type="checkbox" name="weekly_off_days" value="4"> Fri</label>
+          <label class="checkbox-row"><input type="checkbox" name="weekly_off_days" value="5" checked> Sat</label>
+          <label class="checkbox-row"><input type="checkbox" name="weekly_off_days" value="6" checked> Sun</label>
+        </div>
+        <p class="hint">These same day(s) apply to every employee, every week, for the whole month.</p>
+      </div>
+
+      <div id="fixedPerEmployeeNotice" style="display:none;">
+        <p class="hint">Scroll back up to <strong>section 2 (Employees)</strong> — each employee row now shows its own Mon–Sun picker. Tick that person's off day(s) there; it stays fixed every week, all month, and different people can have different days.</p>
+      </div>
+
+      <h3>Minimum staff required per shift, every day</h3>
+      <p class="hint">If a specific day would drop below this number (e.g. a leave overlaps someone's weekly off), Generate Roster will stop and show you exactly which day/shift — no file downloads until it's fixed.</p>
+      <div class="grid-3">
+        <label>Morning
+          <input type="number" name="min_staff_morning" value="1" min="0">
+        </label>
+        <label>Evening
+          <input type="number" name="min_staff_evening" value="1" min="0">
+        </label>
+        <label>Night
+          <input type="number" name="min_staff_night" value="1" min="0">
+        </label>
+      </div>
+      <label class="checkbox-row">
+        <input type="checkbox" name="allow_understaffed_days">
+        Generate anyway even if some days are short-staffed (still flags them in a Warnings tab)
+      </label>
+    </section>
+
+    <!-- ============ LEAVES ============ -->
+    <section class="card">
+      <h2>5. Leaves</h2>
+      <div class="leave-header grid-3">
+        <span>Employee</span><span>From</span><span>To</span>
+      </div>
+      <div id="leaveList"></div>
+      <button type="button" class="btn-add" onclick="addLeave()">+ Add leave</button>
+    </section>
+
+    <button type="submit" class="btn-generate">Generate Roster</button>
+  </form>
+</main>
+
+<script>
+let employeeCount = 0;
+const SHIFT_CYCLE = ['Morning', 'Evening', 'Night'];
+const WEEKDAY_LABELS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+const DEFAULT_OFF_DAYS = [5, 6]; // Sat + Sun
+
+function addEmployee(defaultShift){
+  employeeCount++;
+  const block = document.createElement('div');
+  block.className = 'employee-block';
+  const shift = defaultShift || 'Morning';
+
+  const dayCheckboxes = WEEKDAY_LABELS.map((label, dayNum) => `
+    <label class="checkbox-row mini">
+      <input type="checkbox" class="off-day-cb" data-day="${dayNum}"
+             ${DEFAULT_OFF_DAYS.includes(dayNum) ? 'checked' : ''}
+             onchange="updateOffDaysHidden(this)">
+      ${label}
+    </label>`).join('');
+
+  block.innerHTML = `
+    <div class="row employee-row grid-3">
+      <input type="text" name="employee_name" placeholder="Employee name" required oninput="refreshLeaveDropdowns()">
+      <select name="employee_shift">
+        <option value="Morning" ${shift==='Morning'?'selected':''}>Morning</option>
+        <option value="Evening" ${shift==='Evening'?'selected':''}>Evening</option>
+        <option value="Night" ${shift==='Night'?'selected':''}>Night</option>
+      </select>
+      <button type="button" class="btn-remove" onclick="this.closest('.employee-block').remove(); refreshLeaveDropdowns()">Remove</button>
+    </div>
+    <div class="off-days-block">
+      <span class="off-days-label">Fixed off day(s):</span>
+      ${dayCheckboxes}
+      <input type="hidden" name="employee_off_days" value="${DEFAULT_OFF_DAYS.join(',')}">
+    </div>
+  `;
+  document.getElementById('employeeList').appendChild(block);
+}
+
+function updateOffDaysHidden(checkbox){
+  const block = checkbox.closest('.employee-block');
+  const checked = Array.from(block.querySelectorAll('.off-day-cb:checked')).map(cb => cb.dataset.day);
+  block.querySelector('input[name="employee_off_days"]').value = checked.join(',');
+}
+
+function rotateAllForward(){
+  document.querySelectorAll('select[name="employee_shift"]').forEach(sel => {
+    const nextIndex = (SHIFT_CYCLE.indexOf(sel.value) + 1) % SHIFT_CYCLE.length;
+    sel.value = SHIFT_CYCLE[nextIndex];
+  });
+}
+
+function refreshLeaveDropdowns(){
+  document.querySelectorAll('select[name="leave_employee"]').forEach(sel => {
+    const current = sel.value;
+    sel.innerHTML = employeeOptions();
+    if ([...sel.options].some(o => o.value === current)) sel.value = current;
+  });
+}
+
+function addLeave(){
+  const row = document.createElement('div');
+  row.className = 'row leave-row grid-3';
+  row.innerHTML = `
+    <select name="leave_employee">${employeeOptions()}</select>
+    <input type="date" name="leave_from">
+    <input type="date" name="leave_to">
+    <button type="button" class="btn-remove" onclick="this.parentElement.remove()">Remove</button>
+  `;
+  document.getElementById('leaveList').appendChild(row);
+}
+
+function employeeOptions(){
+  const names = Array.from(document.querySelectorAll('input[name="employee_name"]'))
+                      .map(i => i.value.trim()).filter(Boolean);
+  if(names.length === 0) return '<option value="">Add employees first</option>';
+  return names.map(n => `<option value="${n}">${n}</option>`).join('');
+}
+
+function toggleWeeklyOffFields(){
+  const enabled = document.querySelector('input[name="weekly_off_enabled"]').checked;
+  const mode = document.querySelector('select[name="weekly_off_mode"]').value;
+  document.getElementById('rotatingOffFields').style.display = (enabled && mode === 'rotating') ? 'block' : 'none';
+  document.getElementById('fixedOffFields').style.display = (enabled && mode === 'fixed') ? 'block' : 'none';
+  document.getElementById('fixedPerEmployeeNotice').style.display = (enabled && mode === 'fixed_per_employee') ? 'block' : 'none';
+  document.getElementById('employeeList').classList.toggle('show-off-days', enabled && mode === 'fixed_per_employee');
+}
+
+// start with 3 blank employee rows so the form isn't empty on load
+addEmployee('Morning'); addEmployee('Evening'); addEmployee('Night');
+toggleWeeklyOffFields();
+
+// Default "From date" to today, and "To date" to one month later,
+// so the form isn't empty — the user can change either field freely.
+(function setDefaultDates(){
+  const startInput = document.querySelector('input[name="start_date"]');
+  const endInput = document.querySelector('input[name="end_date"]');
+  const today = new Date();
+  const inOneMonth = new Date(today);
+  inOneMonth.setMonth(inOneMonth.getMonth() + 1);
+  const toISO = d => d.toISOString().split('T')[0];
+  startInput.value = toISO(today);
+  endInput.value = toISO(inOneMonth);
+})();
+</script>
+
+</body>
+</html>
