@@ -192,6 +192,28 @@ input[type=text], input[type=number], input[type=date], select{
 
 .hint{ font-size:0.82rem; color:var(--muted); margin:0; }
 
+.error-card h2{ color:#B33; }
+.error-table{
+  width:100%;
+  border-collapse:collapse;
+  margin:14px 0;
+  font-size:0.9rem;
+}
+.error-table th, .error-table td{
+  border:1px solid var(--border);
+  padding:8px 12px;
+  text-align:left;
+}
+.error-table th{ background:#F5F6FB; }
+.error-back-btn{
+  display:inline-block;
+  text-decoration:none;
+  text-align:center;
+  width:auto;
+  padding:12px 22px;
+  margin-top:10px;
+}
+
 @media (max-width:600px){
   .grid-2, .grid-3{ grid-template-columns:1fr; }
 }

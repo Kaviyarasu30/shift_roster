@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Not enough staff assigned — Shift Roster Generator</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <span class="dot dot-morning"></span><span class="dot dot-evening"></span><span class="dot dot-night"></span>
+    <h1>Shift Roster Generator</h1>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="card error-card">
+    <h2>⚠️ Can't generate the roster for "{{ team_name }}" yet</h2>
+    <p class="hint">
+      The minimum staff you asked for can't be met — not just on some
+      days, but for the <strong>whole period</strong>, because too few
+      employees are assigned to that shift in the first place. Adjusting
+      weekly-offs or leave dates won't fix this; you need to either add
+      more people to the shift below, or lower the minimum.
+    </p>
+
+    <table class="error-table">
+      <thead>
+        <tr><th>Shift</th><th>You require</th><th>Currently assigned</th></tr>
+      </thead>
+      <tbody>
+        {% for s in shortfalls %}
+        <tr>
+          <td>{{ s.shift }}</td>
+          <td>{{ s.required }}</td>
+          <td>{{ s.assigned }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <p class="hint">Fix it by either:</p>
+    <ul class="hint">
+      <li>Going back and assigning more employees to the shift(s) listed above, <em>or</em></li>
+      <li>Lowering "Minimum staff required" for that shift in the Rules section.</li>
+    </ul>
+
+    <a href="javascript:history.back()" class="btn-generate error-back-btn">← Go back and fix</a>
+  </section>
+</main>
+
+</body>
+</html>
